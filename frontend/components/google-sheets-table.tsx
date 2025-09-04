@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Settings, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -22,6 +23,7 @@ export function GoogleSheetsTable() {
   const [sortBy, setSortBy] = useState('Key')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [selectedSprint, setSelectedSprint] = useState<string>('All')
+  const [valueScoreFilter, setValueScoreFilter] = useState<string>('all')
   const [showConfigDialog, setShowConfigDialog] = useState(false)
   const [googleSheetUrl, setGoogleSheetUrl] = useState('')
   const [configLoading, setConfigLoading] = useState(false)
@@ -132,6 +134,28 @@ export function GoogleSheetsTable() {
     return []
   }, [data, summary])
 
+  // 客戶端價值分數篩選 (AC02)
+  const filteredData = useMemo(() => {
+    if (valueScoreFilter === 'all') return data
+    
+    return data.filter((row: any) => {
+      const score = Number(row.businesspoints) || 0
+      
+      switch (valueScoreFilter) {
+        case 'high':
+          return score >= 8
+        case 'medium':
+          return score >= 5 && score < 8
+        case 'low':
+          return score >= 1 && score < 5
+        case 'unrated':
+          return score === 0 || !row.businesspoints
+        default:
+          return true
+      }
+    })
+  }, [data, valueScoreFilter])
+
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
@@ -187,6 +211,47 @@ export function GoogleSheetsTable() {
     if (priorityLower.includes('highest') || priorityLower.includes('high')) return 'bg-red-100 text-red-800'
     if (priorityLower.includes('medium')) return 'bg-yellow-100 text-yellow-800'
     return 'bg-gray-100 text-gray-800'
+  }
+
+  // 價值分數顏色編碼
+  const getValueScoreColor = (score: string | number) => {
+    const numScore = Number(score)
+    if (isNaN(numScore)) return 'bg-gray-100 text-gray-800'
+    
+    // 高分（8-21分）: 綠色
+    if (numScore >= 8) return 'bg-green-100 text-green-800 border-green-200'
+    // 中分（5-7分）: 黃色  
+    if (numScore >= 5) return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+    // 低分（1-4分）: 紅色
+    if (numScore >= 1) return 'bg-red-100 text-red-800 border-red-200'
+    // 0分或無分數: 灰色
+    return 'bg-gray-100 text-gray-800 border-gray-200'
+  }
+
+  // 價值分數明細說明
+  const getValueScoreTooltip = (score: string | number, row: any) => {
+    const numScore = Number(score)
+    if (isNaN(numScore)) return '尚未評分'
+    
+    const storyPoints = row.story_points || 0
+    const priority = row.priority || 'Unknown'
+    
+    return (
+      <div className="space-y-2">
+        <div><strong>價值分數：{numScore}</strong></div>
+        <div className="text-xs space-y-1">
+          <div>• 商業價值點數：{numScore}</div>
+          <div>• 技術複雜度：{storyPoints} SP</div>
+          <div>• 優先等級：{priority}</div>
+        </div>
+        <div className="text-xs text-gray-500 border-t pt-1">
+          {numScore >= 8 ? '高價值項目 - 建議優先開發' :
+           numScore >= 5 ? '中等價值項目 - 可納入計畫' :
+           numScore >= 1 ? '低價值項目 - 謹慎評估' :
+           '尚未評分或無價值'}
+        </div>
+      </div>
+    )
   }
 
   if (error) {
@@ -322,24 +387,55 @@ export function GoogleSheetsTable() {
         </div>
       </div>
 
-      {/* Sprint Filter */}
-      <div className="flex items-center gap-4">
-        <label className="text-sm font-medium text-gray-700">Sprint:</label>
-        <Select value={selectedSprint} onValueChange={(value) => {
-          setSelectedSprint(value)
-          setPage(1) // Reset to first page when filter changes
-        }}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Select Sprint" />
-          </SelectTrigger>
-          <SelectContent>
-            {sprintOptions.map((sprint) => (
-              <SelectItem key={sprint} value={sprint}>
-                {sprint}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Filters Section */}
+      <div className="flex items-center gap-6 flex-wrap">
+        {/* Sprint Filter */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-700">Sprint:</label>
+          <Select value={selectedSprint} onValueChange={(value) => {
+            setSelectedSprint(value)
+            setPage(1) // Reset to first page when filter changes
+          }}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select Sprint" />
+            </SelectTrigger>
+            <SelectContent>
+              {sprintOptions.map((sprint) => (
+                <SelectItem key={sprint} value={sprint}>
+                  {sprint}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Value Score Filter (AC02) */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-700">價值分數:</label>
+          <Select value={valueScoreFilter} onValueChange={(value) => {
+            setValueScoreFilter(value)
+            setPage(1) // Reset to first page when filter changes
+          }}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="篩選分數" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部分數</SelectItem>
+              <SelectItem value="high">高分 (8+)</SelectItem>
+              <SelectItem value="medium">中分 (5-7)</SelectItem>
+              <SelectItem value="low">低分 (1-4)</SelectItem>
+              <SelectItem value="unrated">未評分 (0)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Results count */}
+        <div className="text-sm text-gray-600">
+          {valueScoreFilter !== 'all' 
+            ? `篩選結果: ${filteredData.length} / ${data.length} 項目`
+            : `總計: ${data.length} 項目`
+          }
+        </div>
       </div>
 
       {/* Table container with fixed height and scroll */}
@@ -372,14 +468,14 @@ export function GoogleSheetsTable() {
                     <p className="mt-2 text-gray-500">Loading data...</p>
                   </td>
                 </tr>
-              ) : data.length === 0 ? (
+              ) : filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={allColumns.length || 1} className="text-center py-8 text-gray-500">
-                    No data found
+                    {valueScoreFilter !== 'all' ? '沒有符合篩選條件的資料' : 'No data found'}
                   </td>
                 </tr>
               ) : (
-                data.map((row, index) => (
+                filteredData.map((row, index) => (
                   <tr key={row.key || index} className="hover:bg-gray-50">
                     {allColumns.map((column) => {
                       const value = row[column.key]
@@ -402,6 +498,29 @@ export function GoogleSheetsTable() {
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(value)}`}>
                               {value || '-'}
                             </span>
+                          </td>
+                        )
+                      }
+
+                      // 特殊處理 BusinessPoints 價值分數欄位 (AC01, AC03)
+                      if (column.key === 'businesspoints' || column.label === 'BusinessPoints') {
+                        const score = value || 0
+                        return (
+                          <td key={column.key} className="px-4 py-3 text-sm">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="cursor-help inline-block">
+                                    <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border ${getValueScoreColor(score)}`}>
+                                      {score || '未評分'}
+                                    </span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  {getValueScoreTooltip(score, row)}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </td>
                         )
                       }
