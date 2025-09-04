@@ -8,6 +8,7 @@ import {
   FileText,
   Target,
   Loader2,
+  Star,
 } from "lucide-react"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { Button } from "@/components/ui/button"
@@ -22,8 +23,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { ChartContainer } from "@/components/ui/chart"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDashboard } from "@/hooks/use-dashboard"
+import { useValueScores } from "@/hooks/use-value-scores"
 import { SprintBurndownContainer } from "@/components/sprint-burndown-container"
+import { ValueScoreStats } from "@/components/value-score-display"
+import { IssuesWithScores } from "@/components/issues-with-scores"
 
 export default function JiraDashboard() {
   const [selectedSprint, setSelectedSprint] = useState<string>('All')
@@ -36,6 +41,13 @@ export default function JiraDashboard() {
     error,
     refetch
   } = useDashboard({
+    sprint: selectedSprint === 'All' ? undefined : selectedSprint,
+  })
+
+  const {
+    stats: valueScoreStats,
+    loading: valueScoreLoading
+  } = useValueScores({
     sprint: selectedSprint === 'All' ? undefined : selectedSprint,
   })
 
@@ -119,7 +131,7 @@ export default function JiraDashboard() {
           </Card>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
           {/* Total Issue Count */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -193,6 +205,29 @@ export default function JiraDashboard() {
                 <div className="text-2xl font-bold">{stats?.done_story_points?.toFixed(1) || '0.0'}</div>
               )}
               <p className="text-xs text-muted-foreground">Completed story points</p>
+            </CardContent>
+          </Card>
+
+          {/* Average Value Score */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Average Value Score</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {valueScoreLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-2xl font-bold">--</span>
+                </div>
+              ) : (
+                <div className="text-2xl font-bold">
+                  {valueScoreStats?.average_score?.toFixed(1) || '0.0'}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {valueScoreStats?.total_issues_with_scores || 0} items scored
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -274,6 +309,72 @@ export default function JiraDashboard() {
                   </ResponsiveContainer>
                 </ChartContainer>
               )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Value Score Analysis Section */}
+        <div className="grid gap-4 md:gap-8 lg:grid-cols-1 xl:grid-cols-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>價值分數分析</CardTitle>
+              <CardDescription>
+                顯示 Issues 的價值分數分析與詳細列表
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="overview">價值分數概覽</TabsTrigger>
+                  <TabsTrigger value="issues">Issues 詳細列表</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="overview" className="mt-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">價值分數統計</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ValueScoreStats 
+                          stats={valueScoreStats} 
+                          loading={valueScoreLoading}
+                        />
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">評分建議</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="text-sm">
+                          <h4 className="font-medium text-green-700 mb-2">高價值項目 (8-10 分)</h4>
+                          <p className="text-gray-600">
+                            建議優先處理，預期有高商業價值與用戶影響
+                          </p>
+                        </div>
+                        <div className="text-sm">
+                          <h4 className="font-medium text-yellow-700 mb-2">中等價值項目 (5-7 分)</h4>
+                          <p className="text-gray-600">
+                            可安排在 Sprint 中處理，需考慮工程投入成本
+                          </p>
+                        </div>
+                        <div className="text-sm">
+                          <h4 className="font-medium text-red-700 mb-2">低價值項目 (1-4 分)</h4>
+                          <p className="text-gray-600">
+                            建議重新評估，可能延後或取消
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="issues" className="mt-4">
+                  <IssuesWithScores sprint={selectedSprint} />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>

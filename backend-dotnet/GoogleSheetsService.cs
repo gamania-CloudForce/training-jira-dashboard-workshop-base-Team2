@@ -675,4 +675,105 @@ public class GoogleSheetsService
 
         return null;
     }
+
+    // Value Score related methods
+    public async Task<List<IssueWithValueScore>> GetIssuesWithValueScoresAsync(string? sprintFilter = null)
+    {
+        var allData = await FetchAndCacheDataAsync();
+        var filteredData = ApplySprintFilter(allData, sprintFilter);
+
+        var issues = new List<IssueWithValueScore>();
+
+        foreach (var row in filteredData)
+        {
+            var issue = new IssueWithValueScore(
+                Key: GetStringValueByIndex(row, 0), // Column A - Key
+                Summary: GetStringValueByIndex(row, 3), // Column D - Summary
+                Status: GetStringValueByIndex(row, 5), // Column F - Status
+                StoryPoints: GetDoubleValueByIndex(row, 15), // Column P - Story Points
+                ValueScore: GetDoubleValueByIndex(row, 14), // Column O - BusinessPoints (價值分數)
+                Sprint: GetStringValueByIndex(row, 6), // Column G - Sprint
+                IssueType: GetStringValueByIndex(row, 1), // Column B - Issue Type
+                Priority: GetStringValueByIndex(row, 8) // Column I - Priority
+            );
+
+            issues.Add(issue);
+        }
+
+        return issues;
+    }
+
+    public async Task<ValueScoreStats> GetValueScoreStatsAsync(string? sprintFilter = null)
+    {
+        var issues = await GetIssuesWithValueScoresAsync(sprintFilter);
+        var scores = issues.Where(i => i.ValueScore.HasValue && i.ValueScore.Value > 0).Select(i => i.ValueScore!.Value).ToList();
+
+        if (!scores.Any())
+        {
+            return new ValueScoreStats(
+                AverageScore: 0,
+                MaxScore: 0,
+                MinScore: 0,
+                TotalIssuesWithScores: 0,
+                ScoreDistribution: new Dictionary<string, int>()
+            );
+        }
+
+        return new ValueScoreStats(
+            AverageScore: Math.Round(scores.Average(), 2),
+            MaxScore: scores.Max(),
+            MinScore: scores.Min(),
+            TotalIssuesWithScores: scores.Count,
+            ScoreDistribution: GetScoreDistribution(scores)
+        );
+    }
+
+    public async Task<EnhancedDashboardStats> GetEnhancedDashboardStatsAsync(string? sprintFilter = null)
+    {
+        var basicStats = await GetDashboardStatsAsync(sprintFilter);
+        var valueScoreStats = await GetValueScoreStatsAsync(sprintFilter);
+
+        return new EnhancedDashboardStats(
+            TotalIssues: basicStats.TotalIssues,
+            TotalStoryPoints: basicStats.TotalStoryPoints,
+            DoneIssues: basicStats.DoneIssues,
+            DoneStoryPoints: basicStats.DoneStoryPoints,
+            ValueScoreStats: valueScoreStats,
+            LastUpdated: basicStats.LastUpdated
+        );
+    }
+
+    private Dictionary<string, int> GetScoreDistribution(List<double> scores)
+    {
+        return new Dictionary<string, int>
+        {
+            ["High (8-10)"] = scores.Count(s => s >= 8 && s <= 10),
+            ["Medium (5-7)"] = scores.Count(s => s >= 5 && s < 8),
+            ["Low (1-4)"] = scores.Count(s => s >= 1 && s < 5),
+            ["No Score (0)"] = scores.Count(s => s == 0)
+        };
+    }
+
+    private string GetStringValueByIndex(Dictionary<string, object?> row, int index)
+    {
+        var key = row.Keys.Skip(index).FirstOrDefault();
+        if (key != null && row.TryGetValue(key, out var value) && value != null)
+        {
+            return value.ToString()?.Trim() ?? "";
+        }
+        return "";
+    }
+
+    private double? GetDoubleValueByIndex(Dictionary<string, object?> row, int index)
+    {
+        var key = row.Keys.Skip(index).FirstOrDefault();
+        if (key != null && row.TryGetValue(key, out var value) && value != null)
+        {
+            if (double.TryParse(value.ToString(), out var result))
+            {
+                return result;
+            }
+        }
+        return null;
+    }
 }

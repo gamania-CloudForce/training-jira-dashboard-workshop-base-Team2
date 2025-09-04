@@ -106,6 +106,52 @@ app.MapGet("/api/dashboard/status-distribution", async (
     }
 });
 
+// Value Score API endpoints
+app.MapGet("/api/dashboard/issues-with-scores", async (
+    [FromServices] GoogleSheetsService sheetsService,
+    [FromQuery] string? sprint = null) =>
+{
+    try
+    {
+        var issues = await sheetsService.GetIssuesWithValueScoresAsync(sprint);
+        return Results.Ok(issues);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
+app.MapGet("/api/dashboard/value-score-stats", async (
+    [FromServices] GoogleSheetsService sheetsService,
+    [FromQuery] string? sprint = null) =>
+{
+    try
+    {
+        var stats = await sheetsService.GetValueScoreStatsAsync(sprint);
+        return Results.Ok(stats);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
+app.MapGet("/api/dashboard/enhanced-stats", async (
+    [FromServices] GoogleSheetsService sheetsService,
+    [FromQuery] string? sprint = null) =>
+{
+    try
+    {
+        var stats = await sheetsService.GetEnhancedDashboardStatsAsync(sprint);
+        return Results.Ok(stats);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
 // Sprint Burndown API endpoints
 app.MapGet("/api/sprint/burndown/{sprintName}", async (string sprintName, GoogleSheetsService sheetsService) =>
 {

@@ -68,6 +68,36 @@ public record SheetConfigInfo(
     [property: JsonPropertyName("sheet_url")] string SheetUrl
 );
 
+// Value Score Models
+public record IssueWithValueScore(
+    [property: JsonPropertyName("key")] string Key,
+    [property: JsonPropertyName("summary")] string Summary,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("story_points")] double? StoryPoints,
+    [property: JsonPropertyName("value_score")] double? ValueScore,
+    [property: JsonPropertyName("sprint")] string? Sprint,
+    [property: JsonPropertyName("issue_type")] string? IssueType,
+    [property: JsonPropertyName("priority")] string? Priority
+);
+
+public record ValueScoreStats(
+    [property: JsonPropertyName("average_score")] double AverageScore,
+    [property: JsonPropertyName("max_score")] double MaxScore,
+    [property: JsonPropertyName("min_score")] double MinScore,
+    [property: JsonPropertyName("total_issues_with_scores")] int TotalIssuesWithScores,
+    [property: JsonPropertyName("score_distribution")] Dictionary<string, int> ScoreDistribution
+);
+
+// Enhanced Dashboard Stats with Value Scores
+public record EnhancedDashboardStats(
+    [property: JsonPropertyName("total_issues")] int TotalIssues,
+    [property: JsonPropertyName("total_story_points")] double TotalStoryPoints,
+    [property: JsonPropertyName("done_issues")] int DoneIssues,
+    [property: JsonPropertyName("done_story_points")] double DoneStoryPoints,
+    [property: JsonPropertyName("value_score_stats")] ValueScoreStats? ValueScoreStats,
+    [property: JsonPropertyName("last_updated")] DateTime LastUpdated
+);
+
 // Sprint Burndown Models
 public record SprintBurndownData(
     [property: JsonPropertyName("sprint_name")] string SprintName,
