@@ -28,7 +28,8 @@ import { useDashboard } from "@/hooks/use-dashboard"
 import { useValueScores } from "@/hooks/use-value-scores"
 import { SprintBurndownContainer } from "@/components/sprint-burndown-container"
 import { ValueScoreStats } from "@/components/value-score-display"
-import { IssuesWithScores } from "@/components/issues-with-scores"
+import { IssuesWithScores } from "@/components/issues-with-value-scores"
+import { ValueScoreGuide, ValueScoreSummaryCard, TagsGuide } from "@/components/value-score-guide"
 
 export default function JiraDashboard() {
   const [selectedSprint, setSelectedSprint] = useState<string>('All')
@@ -118,6 +119,12 @@ export default function JiraDashboard() {
       </header>
 
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        {/* 價值分數指南 */}
+        <ValueScoreGuide />
+        
+        {/* 標籤說明指南 */}
+        <TagsGuide />
+        
         {error && (
           <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-6">

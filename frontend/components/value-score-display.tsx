@@ -7,6 +7,8 @@ interface ValueScoreDisplayProps {
   score?: number;
   size?: 'sm' | 'md' | 'lg';
   showTooltip?: boolean;
+  showLabel?: boolean;
+  showFullDescription?: boolean;
   className?: string;
 }
 
@@ -14,27 +16,49 @@ export function ValueScoreDisplay({
   score, 
   size = 'md', 
   showTooltip = true, 
+  showLabel = true,
+  showFullDescription = false,
   className = '' 
 }: ValueScoreDisplayProps) {
   if (!score && score !== 0) {
     return (
-      <span className={`text-gray-400 text-sm ${className}`}>
-        -
-      </span>
+      <div className={`inline-flex items-center gap-2 ${className}`}>
+        <span className="text-gray-400 text-sm bg-gray-100 px-2 py-1 rounded-full">
+          未評分
+        </span>
+        {showFullDescription && (
+          <span className="text-xs text-gray-500">
+            尚未進行價值評估
+          </span>
+        )}
+      </div>
     );
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 8) return 'text-green-700 bg-green-100 border-green-200';
-    if (score >= 5) return 'text-yellow-700 bg-yellow-100 border-yellow-200';
-    if (score >= 1) return 'text-red-700 bg-red-100 border-red-200';
-    return 'text-gray-700 bg-gray-100 border-gray-200';
+    if (score >= 10) return 'text-emerald-800 bg-emerald-100 border-emerald-300';
+    if (score >= 8) return 'text-green-800 bg-green-100 border-green-300';
+    if (score >= 5) return 'text-yellow-800 bg-yellow-100 border-yellow-300';
+    if (score >= 3) return 'text-orange-800 bg-orange-100 border-orange-300';
+    if (score >= 1) return 'text-red-800 bg-red-100 border-red-300';
+    return 'text-gray-800 bg-gray-100 border-gray-300';
+  };
+
+  const getScoreLevel = (score: number) => {
+    if (score >= 10) return '極高';
+    if (score >= 8) return '高';
+    if (score >= 5) return '中';
+    if (score >= 3) return '低';
+    if (score >= 1) return '極低';
+    return '未評';
   };
 
   const getScoreLabel = (score: number) => {
-    if (score >= 8) return '高價值項目';
-    if (score >= 5) return '中等價值項目';
-    if (score >= 1) return '低價值項目';
+    if (score >= 10) return '戰略級功能，業務影響極大';
+    if (score >= 8) return '重要功能，明顯業務價值';
+    if (score >= 5) return '一般功能，適中業務價值';
+    if (score >= 3) return '次要功能，有限業務價值';
+    if (score >= 1) return '可選功能，業務價值微小';
     return '未評分項目';
   };
 
@@ -45,16 +69,33 @@ export function ValueScoreDisplay({
   };
 
   const scoreElement = (
-    <span 
-      className={`
-        inline-flex items-center rounded-full font-medium border
-        ${getScoreColor(score)} 
-        ${sizeClasses[size]}
-        ${className}
-      `}
-    >
-      {score.toFixed(1)}
-    </span>
+    <div className={`inline-flex items-center gap-2 ${className}`}>
+      <span 
+        className={`
+          inline-flex items-center gap-1 rounded-full font-medium border
+          ${getScoreColor(score)} 
+          ${sizeClasses[size]}
+        `}
+      >
+        <span className="font-bold">{score.toFixed(1)}</span>
+        {showLabel && (
+          <span className="text-xs opacity-80 font-medium">
+            {getScoreLevel(score)}
+          </span>
+        )}
+      </span>
+      
+      {showFullDescription && (
+        <div className="flex flex-col">
+          <span className="text-sm font-medium text-gray-700">
+            {getScoreLevel(score)}價值功能
+          </span>
+          <span className="text-xs text-gray-500 max-w-xs">
+            {getScoreLabel(score)}
+          </span>
+        </div>
+      )}
+    </div>
   );
 
   if (!showTooltip) return scoreElement;
@@ -65,17 +106,38 @@ export function ValueScoreDisplay({
         <TooltipTrigger asChild>
           {scoreElement}
         </TooltipTrigger>
-        <TooltipContent>
-          <div className="text-sm">
-            <p className="font-medium">價值分數: {score.toFixed(1)}</p>
-            <p className="text-xs text-gray-600 mt-1">
+        <TooltipContent className="max-w-xs">
+          <div className="text-sm space-y-2">
+            <div className="font-medium">
+              價值分數: {score.toFixed(1)} ({getScoreLevel(score)}價值)
+            </div>
+            <div className="text-xs text-gray-600">
               {getScoreLabel(score)}
-            </p>
-            <div className="text-xs text-gray-500 mt-1">
-              <p>評分標準:</p>
-              <p>• 8-10: 高價值項目</p>
-              <p>• 5-7: 中等價值項目</p>
-              <p>• 1-4: 低價值項目</p>
+            </div>
+            <div className="text-xs text-gray-500 border-t pt-2">
+              <p className="font-medium mb-1">評分標準:</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                  <span>10+ 極高價值 (戰略級)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                  <span>8-9 高價值 (重要)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                  <span>5-7 中等價值 (一般)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-orange-400 rounded-full"></span>
+                  <span>3-4 低價值 (次要)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                  <span>&lt;3 極低價值 (可選)</span>
+                </div>
+              </div>
             </div>
           </div>
         </TooltipContent>
